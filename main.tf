@@ -105,3 +105,45 @@ resource "aws_route_table_association" "internet_access_association" {
   subnet_id = element(aws_subnet.private.*.id, count.index)
   route_table_id = element(aws_route_table.internet_access.*.id, count.index)
 }
+
+# security
+
+resource "aws_security_group" "load_balancer_sg" {
+  name = "${local.vpc_name}_load_balancer_sg"
+  vpc_id = aws_vpc.buildbot_micro.id
+  ingress {
+    protocol = "tcp"
+    from_port = 80
+    to_port = 80
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "${local.vpc_name}_load_balancer_sg"
+  }
+}
+
+resource "aws_security_group" "ecs_task_sg" {
+  name = "${local.vpc_name}_ecs_task_sg"
+  vpc_id = aws_vpc.buildbot_micro.id
+  ingress {
+    protocol = "tcp"
+    from_port = 8010
+    to_port = 8010
+    security_groups = [aws_security_group.load_balancer_sg.id]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "${local.vpc_name}_ecs_task_sg"
+  }
+}
