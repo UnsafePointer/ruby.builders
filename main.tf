@@ -147,3 +147,48 @@ resource "aws_security_group" "ecs_task_sg" {
     Name = "${local.vpc_name}_ecs_task_sg"
   }
 }
+
+# Application Load Balancer
+
+resource "aws_alb" "buildbot_alb" {
+  name = "buildbot-alb"
+  subnets = aws_subnet.public.*.id
+  security_groups = [aws_security_group.load_balancer_sg.id]
+  tags = {
+    Name = "${local.vpc_name}_load_balancer"
+  }
+}
+
+resource "aws_alb_target_group" "buildbot_target_group" {
+  name = "buildbot-alb-target-group"
+  port = 8010
+  protocol = "HTTP"
+  vpc_id = aws_vpc.buildbot_micro.id
+  target_type = "ip"
+  health_check {
+    healthy_threshold = "3"
+    interval = "30"
+    protocol = "HTTP"
+    matcher = "200"
+    timeout = "3"
+    path = "/"
+    unhealthy_threshold = "2"
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+  tags = {
+    Name = "${local.vpc_name}_target_group"
+  }
+}
+
+resource "aws_alb_listener" "buildbot_listener" {
+  load_balancer_arn = aws_alb.buildbot_alb.id
+  port = 80
+  protocol = "HTTP"
+
+  default_action {
+    target_group_arn = aws_alb_target_group.buildbot_target_group.id
+    type = "forward"
+  }
+}
