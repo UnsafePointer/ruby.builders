@@ -214,3 +214,47 @@ resource "aws_iam_role_policy_attachment" "ecs_tasks_policy_attachment" {
   role = aws_iam_role.ecs_tasks_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
+
+# ECS task with Fargate launch type
+
+resource "aws_ecs_cluster" "ecs_cluster" {
+  name = "${local.vpc_name}_ecs_cluster"
+}
+
+data "template_file" "buildbot_container_definition" {
+  template = file("./templates/buildbot.json.tpl")
+  vars = {
+    image = "buildbot/buildbot-master:master"
+    name = "buildbot"
+    container_port = 8010
+  }
+}
+
+resource "aws_ecs_task_definition" "buildbot_ecs_task_definition" {
+  family = "${local.vpc_name}_task"
+  execution_role_arn = aws_iam_role.ecs_tasks_execution_role.arn
+  network_mode = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu = 256
+  memory = 512
+  container_definitions = data.template_file.buildbot_container_definition.rendered
+}
+
+resource "aws_ecs_service" "buildbot_ecs_service" {
+  name = "${local.vpc_name}_ecs_service"
+  cluster = aws_ecs_cluster.ecs_cluster.id
+  task_definition = aws_ecs_task_definition.buildbot_ecs_task_definition.arn
+  desired_count = 1
+  launch_type = "FARGATE"
+  network_configuration {
+    security_groups = [aws_security_group.ecs_task_sg.id]
+    subnets = aws_subnet.private.*.id
+    assign_public_ip = true
+  }
+  load_balancer {
+    target_group_arn = aws_alb_target_group.buildbot_target_group.id
+    container_name = "buildbot"
+    container_port = 8010
+  }
+  depends_on = [aws_alb_listener.buildbot_listener, aws_iam_role_policy_attachment.ecs_tasks_policy_attachment]
+}
