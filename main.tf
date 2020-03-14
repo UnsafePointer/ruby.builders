@@ -68,3 +68,23 @@ resource "aws_nat_gateway" "nat_gw" {
     Name = "${local.vpc_name}_nat_gw_${local.availability_zones[count.index]}"
   }
 }
+
+# Private subnet internet routing
+
+resource "aws_route_table" "internet_access" {
+  count = length(local.availability_zones)
+  vpc_id = aws_vpc.buildbot_micro.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = element(aws_nat_gateway.nat_gw.*.id, count.index)
+  }
+  tags = {
+    Name = "${local.vpc_name}_route_table_internet_access_${local.availability_zones[count.index]}"
+  }
+}
+
+resource "aws_route_table_association" "internet_access_association" {
+  count = length(local.availability_zones)
+  subnet_id = element(aws_subnet.private.*.id, count.index)
+  route_table_id = element(aws_route_table.internet_access.*.id, count.index)
+}
