@@ -355,7 +355,7 @@ resource "aws_ecr_repository" "buildbot_repository" {
 resource "aws_ssm_parameter" "buildbot_web_url" {
   name  = "/buildbot/web-url"
   type  = "String"
-  value = "http://${aws_alb.buildbot_alb.dns_name}/"
+  value = "https://${local.domain}/"
 }
 
 resource "aws_ssm_parameter" "buildbot_admin_username" {
