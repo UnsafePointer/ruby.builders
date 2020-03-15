@@ -15,13 +15,14 @@ variable "aws_secret_key" {}
 
 provider "aws" {
   version = "~> 2.0"
-  region  = "us-east-1"
+  region  = local.region
   access_key = var.aws_access_key
   secret_key = var.aws_secret_key
 }
 
 locals {
   vpc_name = "buildbot_micro"
+  region = "us-east-1"
   availability_zones = ["us-east-1a", "us-east-1b"]
 }
 
@@ -205,6 +206,34 @@ data "aws_iam_policy_document" "ecs_tasks_policy_document" {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
+resource "aws_iam_policy" "aws_iam_policy_buildbot_ssm" {
+  name        = "aws_iam_policy_buildbot_ssm"
+  path        = "/"
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:DescribeParameters"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ssm:GetParameter"
+            ],
+            "Resource": "arn:aws:ssm:${local.region}:${data.aws_caller_identity.current.account_id}:parameter/buildbot/*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_role" "ecs_tasks_execution_role" {
   name = "${local.vpc_name}_ecs_task_execution_role"
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_policy_document.json
@@ -213,6 +242,11 @@ resource "aws_iam_role" "ecs_tasks_execution_role" {
 resource "aws_iam_role_policy_attachment" "ecs_tasks_policy_attachment" {
   role = aws_iam_role.ecs_tasks_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_tasks_ssm_policy_attachment" {
+  role = aws_iam_role.ecs_tasks_execution_role.name
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ssm.arn
 }
 
 # ECS task with Fargate launch type
@@ -224,7 +258,7 @@ resource "aws_ecs_cluster" "ecs_cluster" {
 data "template_file" "buildbot_container_definition" {
   template = file("./templates/buildbot.json.tpl")
   vars = {
-    image = "buildbot/buildbot-master:master"
+    image = "${aws_ecr_repository.buildbot_repository.repository_url}:latest"
     name = "buildbot"
     container_port = 8010
   }
@@ -263,4 +297,12 @@ resource "aws_ecs_service" "buildbot_ecs_service" {
 
 resource "aws_ecr_repository" "buildbot_repository" {
   name = "buildbot"
+}
+
+# SSM parameters
+
+resource "aws_ssm_parameter" "buildbot_web_url" {
+  name  = "/buildbot/web-url"
+  type  = "String"
+  value = "http://${aws_alb.buildbot_alb.dns_name}/"
 }

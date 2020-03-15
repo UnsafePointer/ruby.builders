@@ -1,10 +1,10 @@
 [
   {
-    "cpu": 128,
+    "cpu": 256,
     "essential": true,
     "image": "${image}",
-    "memory": 128,
-    "memoryReservation": 64,
+    "memory": 384,
+    "memoryReservation": 128,
     "name": "${name}",
     "portMappings": [
       {
@@ -13,8 +13,8 @@
     ],
     "environment": [
       {
-        "name": "BUILDBOT_CONFIG_URL",
-        "value": "https://github.com/buildbot/buildbot-docker-example-config/archive/master.tar.gz"
+        "name": "BUILDBOT_WEB_URL",
+        "value": "ssm:///buildbot/web-url"
       }
     ]
   }
