@@ -13,6 +13,10 @@ variable "aws_access_key" {}
 
 variable "aws_secret_key" {}
 
+variable "buildbot_admin_username" {}
+
+variable "buildbot_admin_password" {}
+
 provider "aws" {
   version = "~> 2.0"
   region  = local.region
@@ -313,6 +317,18 @@ resource "aws_ssm_parameter" "buildbot_web_url" {
   name  = "/buildbot/web-url"
   type  = "String"
   value = "http://${aws_alb.buildbot_alb.dns_name}/"
+}
+
+resource "aws_ssm_parameter" "buildbot_admin_username" {
+  name  = "/buildbot/admin-username"
+  type  = "SecureString"
+  value = var.buildbot_admin_username
+}
+
+resource "aws_ssm_parameter" "buildbot_admin_password" {
+  name  = "/buildbot/admin-password"
+  type  = "SecureString"
+  value = var.buildbot_admin_password
 }
 
 # CloudWatch

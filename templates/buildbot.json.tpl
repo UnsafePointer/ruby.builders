@@ -15,6 +15,14 @@
       {
         "name": "BUILDBOT_WEB_URL",
         "value": "ssm:///buildbot/web-url"
+      },
+      {
+        "name": "BUILDBOT_ADMIN_USERNAME",
+        "value": "ssm:///buildbot/admin-username"
+      },
+      {
+        "name": "BUILDBOT_ADMIN_PASSWORD",
+        "value": "ssm:///buildbot/admin-password"
       }
     ],
     "logConfiguration": {
