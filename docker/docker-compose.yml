@@ -1,0 +1,10 @@
+version: '3'
+services:
+  buildbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8010:8010"
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
