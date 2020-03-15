@@ -258,3 +258,9 @@ resource "aws_ecs_service" "buildbot_ecs_service" {
   }
   depends_on = [aws_alb_listener.buildbot_listener, aws_iam_role_policy_attachment.ecs_tasks_policy_attachment]
 }
+
+# ECR repository
+
+resource "aws_ecr_repository" "buildbot_repository" {
+  name = "buildbot"
+}
