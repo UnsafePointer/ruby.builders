@@ -26,6 +26,7 @@ provider "aws" {
 
 locals {
   vpc_name = "buildbot_micro"
+  domain = "ruby.builders"
   region = "us-east-1"
   availability_zones = ["us-east-1a", "us-east-1b"]
   container_name = "buildbot"
@@ -336,4 +337,10 @@ resource "aws_ssm_parameter" "buildbot_admin_password" {
 resource "aws_cloudwatch_log_group" "hello_world" {
   name = local.container_name
   retention_in_days = 1
+}
+
+# Route 53
+
+resource "aws_route53_zone" "public_hosted_zone" {
+  name = local.domain
 }
