@@ -240,13 +240,18 @@ resource "aws_iam_role" "ecs_tasks_execution_role" {
   assume_role_policy = data.aws_iam_policy_document.ecs_tasks_policy_document.json
 }
 
+resource "aws_iam_role" "ecs_tasks_role" {
+  name = "${local.vpc_name}_ecs_tasks_role"
+  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_policy_document.json
+}
+
 resource "aws_iam_role_policy_attachment" "ecs_tasks_policy_attachment" {
   role = aws_iam_role.ecs_tasks_execution_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
 resource "aws_iam_role_policy_attachment" "ecs_tasks_ssm_policy_attachment" {
-  role = aws_iam_role.ecs_tasks_execution_role.name
+  role = aws_iam_role.ecs_tasks_role.name
   policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ssm.arn
 }
 
@@ -260,13 +265,15 @@ data "template_file" "buildbot_container_definition" {
   template = file("./templates/buildbot.json.tpl")
   vars = {
     image = "${aws_ecr_repository.buildbot_repository.repository_url}:latest"
-    name = "buildbot"
+    name = local.container_name
     container_port = 8010
+    region = local.region
   }
 }
 
 resource "aws_ecs_task_definition" "buildbot_ecs_task_definition" {
   family = "${local.vpc_name}_task"
+  task_role_arn = aws_iam_role.ecs_tasks_role.arn
   execution_role_arn = aws_iam_role.ecs_tasks_execution_role.arn
   network_mode = "awsvpc"
   requires_compatibilities = ["FARGATE"]
