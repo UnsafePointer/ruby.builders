@@ -355,3 +355,24 @@ resource "aws_route53_record" "domain_record" {
     evaluate_target_health = true
   }
 }
+
+resource "aws_route53_record" "ssl_certificate_validation_record" {
+  name = aws_acm_certificate.ssl_certificate.domain_validation_options.0.resource_record_name
+  type = aws_acm_certificate.ssl_certificate.domain_validation_options.0.resource_record_type
+  zone_id = aws_route53_zone.public_hosted_zone.id
+  records = ["${aws_acm_certificate.ssl_certificate.domain_validation_options.0.resource_record_value}"]
+  ttl = 60
+}
+
+# ACM
+
+resource "aws_acm_certificate" "ssl_certificate" {
+  domain_name = "*.${local.domain}"
+  validation_method = "DNS"
+  subject_alternative_names = ["${local.domain}"]
+}
+
+resource "aws_acm_certificate_validation" "ssl_certificate_validation" {
+  certificate_arn = aws_acm_certificate.ssl_certificate.arn
+  validation_record_fqdns = ["${aws_route53_record.ssl_certificate_validation_record.fqdn}"]
+}
