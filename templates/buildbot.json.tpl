@@ -16,6 +16,14 @@
         "name": "BUILDBOT_WEB_URL",
         "value": "ssm:///buildbot/web-url"
       }
-    ]
+    ],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-region": "${region}",
+        "awslogs-group": "${name}",
+        "awslogs-stream-prefix": "${name}"
+      }
+    }
   }
 ]

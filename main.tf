@@ -24,6 +24,7 @@ locals {
   vpc_name = "buildbot_micro"
   region = "us-east-1"
   availability_zones = ["us-east-1a", "us-east-1b"]
+  container_name = "buildbot"
 }
 
 resource "aws_vpc" "buildbot_micro" {
@@ -305,4 +306,11 @@ resource "aws_ssm_parameter" "buildbot_web_url" {
   name  = "/buildbot/web-url"
   type  = "String"
   value = "http://${aws_alb.buildbot_alb.dns_name}/"
+}
+
+# CloudWatch
+
+resource "aws_cloudwatch_log_group" "hello_world" {
+  name = local.container_name
+  retention_in_days = 1
 }
