@@ -344,3 +344,14 @@ resource "aws_cloudwatch_log_group" "hello_world" {
 resource "aws_route53_zone" "public_hosted_zone" {
   name = local.domain
 }
+
+resource "aws_route53_record" "domain_record" {
+  zone_id = aws_route53_zone.public_hosted_zone.zone_id
+  name = local.domain
+  type = "A"
+  alias {
+    name = aws_alb.buildbot_alb.dns_name
+    zone_id = aws_alb.buildbot_alb.zone_id
+    evaluate_target_health = true
+  }
+}
