@@ -135,6 +135,26 @@ resource "aws_security_group" "load_balancer_sg" {
   }
 }
 
+resource "aws_security_group" "load_balancer_ssl_sg" {
+  name = "${local.vpc_name}_load_balancer_ssl_sg"
+  vpc_id = aws_vpc.buildbot_micro.id
+  ingress {
+    protocol = "tcp"
+    from_port = 443
+    to_port = 443
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "${local.vpc_name}_load_balancer_ssl_sg"
+  }
+}
+
 resource "aws_security_group" "ecs_task_sg" {
   name = "${local.vpc_name}_ecs_task_sg"
   vpc_id = aws_vpc.buildbot_micro.id
@@ -142,7 +162,7 @@ resource "aws_security_group" "ecs_task_sg" {
     protocol = "tcp"
     from_port = 8010
     to_port = 8010
-    security_groups = [aws_security_group.load_balancer_sg.id]
+    security_groups = [aws_security_group.load_balancer_sg.id, aws_security_group.load_balancer_ssl_sg.id]
   }
   egress {
     protocol = "-1"
@@ -160,7 +180,7 @@ resource "aws_security_group" "ecs_task_sg" {
 resource "aws_alb" "buildbot_alb" {
   name = "buildbot-alb"
   subnets = aws_subnet.public.*.id
-  security_groups = [aws_security_group.load_balancer_sg.id]
+  security_groups = [aws_security_group.load_balancer_sg.id, aws_security_group.load_balancer_ssl_sg.id]
   tags = {
     Name = "${local.vpc_name}_load_balancer"
   }
@@ -189,14 +209,32 @@ resource "aws_alb_target_group" "buildbot_target_group" {
   }
 }
 
+resource "aws_alb_listener" "buildbot_ssl_listener" {
+  load_balancer_arn = aws_alb.buildbot_alb.id
+  port = 443
+  protocol = "HTTPS"
+  ssl_policy = "ELBSecurityPolicy-2016-08"
+  certificate_arn = aws_acm_certificate.ssl_certificate.arn
+
+  default_action {
+    target_group_arn = aws_alb_target_group.buildbot_target_group.id
+    type = "forward"
+  }
+}
+
 resource "aws_alb_listener" "buildbot_listener" {
   load_balancer_arn = aws_alb.buildbot_alb.id
   port = 80
   protocol = "HTTP"
 
   default_action {
-    target_group_arn = aws_alb_target_group.buildbot_target_group.id
-    type = "forward"
+    type = "redirect"
+
+    redirect {
+      port = "443"
+      protocol = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 
