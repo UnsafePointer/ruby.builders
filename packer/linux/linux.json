@@ -1,0 +1,55 @@
+{
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "ubuntu/images/*ubuntu-bionic-18.04-amd64-server-*",
+          "root-device-type": "ebs"
+        },
+        "owners": [
+          "099720109477"
+        ],
+        "most_recent": true
+      },
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "ami_name": "buildbot-worker-{{timestamp}}",
+      "iam_instance_profile": "ec2_buildbot_worker_instance_profile"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add -",
+        "apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ bionic main'",
+        "apt-get update",
+        "apt-get -y install libsdl2-dev cmake software-properties-common zip jq",
+        "add-apt-repository -y ppa:ubuntu-toolchain-r/test",
+        "apt-get update",
+        "apt-get -y install gcc-9 g++-9",
+        "update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9 --slave /usr/bin/gcov gcov /usr/bin/gcov-9",
+        "curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'",
+        "unzip awscliv2.zip",
+        "rm -rf awscliv2.zip",
+        "./aws/install",
+        "rm -rf aws",
+        "curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py",
+        "python3 get-pip.py",
+        "rm -rf get-pip.py",
+        "pip install buildbot-worker"
+      ],
+      "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "WORKER_USERNAME=`aws ssm get-parameter --with-decryption --name '/buildbot/worker/worker-username' | jq -r '.Parameter.Value'`",
+        "WORKER_PASSWORD=`aws ssm get-parameter --with-decryption --name '/buildbot/worker/worker-password' | jq -r '.Parameter.Value'`",
+        "buildbot-worker create-worker $PWD workers.ruby.builders $WORKER_USERNAME $WORKER_PASSWORD"
+      ]
+    }
+  ]
+}
