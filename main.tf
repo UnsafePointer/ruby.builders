@@ -511,3 +511,10 @@ resource "aws_acm_certificate_validation" "ssl_certificate_validation" {
   certificate_arn = aws_acm_certificate.ssl_certificate.arn
   validation_record_fqdns = ["${aws_route53_record.ssl_certificate_validation_record.fqdn}"]
 }
+
+# EC2
+
+resource "aws_key_pair" "buildbot" {
+  key_name = "buildbot-key"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDm7jEeqyLfT+Sy2ksGg8zh7UkZ7mzS72S72LiQF4tdr2zD+03URSW3BZiMQRXN78l25Ddu6rNnKdoJ8JS8ZHMzM4ZlMQMOqo3KJKjya64ChpkmkePMYFf07FL6WPZw+K89+67PB+PbAHzUgEjBC8PRPgGs/ExL/580xqE1xNuJhQlLuI5dgbIrORrOJH8+OjQsOkl8NObnqEI4NvfOqsVZYMWG1GBZ5HJu+UBTuM+k4wcif22bnR0hzf2jdSb4S4NZ9ffoE9Ccwwkye9kuRVvtYZtibRAoh82EuI5umiIbSllxX/FTOVKq9ViYcSd57PxnkgFZSP/3m6Ut6CAPCKEfv7PJC1u/XStm6nVAmNjOJKVLIOG36NTYV7SO3piPy1n7Hw6rfcaJcjA3RTtwD9bVZ4QnStUTTBQO+gky4ED0P+in41eOyz/eNLPGxa0L4aXMArsAcAc0ypaPOsnGO08SVfMcxRiYF7IOZoh3ssz2NDH+/fzEg6XIXWPuHxGG79h5cdYHyal9vnDxVE33gKuJtokayTKtfjQMitwPffr4cl7M2e0W/Qwz7EhiiObMrbedk44z7tpk2wcv33gIrDoF3EAg3bMzWGueAyLsRmcv5UnVVwIhWsYmRJAX4Cp70Toc6L2u/McZTrIYkHNaalOxG5MBVTCQFmqgqHtt1qhwyQ== buildbot@ruby.builders"
+}
