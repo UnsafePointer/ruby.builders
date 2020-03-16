@@ -8,7 +8,10 @@
     "name": "${name}",
     "portMappings": [
       {
-        "containerPort": ${container_port}
+        "containerPort": ${web_container_port}
+      },
+      {
+        "containerPort": ${workers_container_port}
       }
     ],
     "environment": [

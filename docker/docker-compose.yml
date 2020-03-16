@@ -6,5 +6,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8010:8010"
+      - "9989:9989"
     environment:
       - AWS_DEFAULT_REGION=us-east-1

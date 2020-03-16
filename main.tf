@@ -175,6 +175,68 @@ resource "aws_security_group" "ecs_task_sg" {
   }
 }
 
+resource "aws_security_group" "network_load_balancer_sg" {
+  name = "${local.vpc_name}_network_load_balancer_sg"
+  vpc_id = aws_vpc.buildbot_micro.id
+  ingress {
+    protocol = "tcp"
+    from_port = 9989
+    to_port = 9989
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "${local.vpc_name}network_load_balancer_sg"
+  }
+}
+
+# Network Load Balancer
+
+resource "aws_lb" "buildbot_nlb" {
+  name = "buildbot-nlb"
+  load_balancer_type = "network"
+  subnets = aws_subnet.public.*.id
+  tags = {
+    Name = "${local.vpc_name}_network_load_balancer"
+  }
+}
+
+resource "aws_lb_target_group" "buildbot_workers_target_group" {
+  name = "buildbotworkers-nlb-target-group"
+  port = 9989
+  protocol = "TCP"
+  vpc_id = aws_vpc.buildbot_micro.id
+  target_type = "ip"
+  health_check {
+    healthy_threshold = "3"
+    interval = "30"
+    unhealthy_threshold = "3"
+    protocol = "TCP"
+  }
+  lifecycle {
+    create_before_destroy = true
+  }
+  tags = {
+    Name = "${local.vpc_name}_workers_target_group"
+  }
+}
+
+resource "aws_alb_listener" "buildbot_workers_listener" {
+  load_balancer_arn = aws_lb.buildbot_nlb.id
+  port = 9989
+  protocol = "TCP"
+
+  default_action {
+    target_group_arn = aws_lb_target_group.buildbot_workers_target_group.id
+    type = "forward"
+  }
+}
+
 # Application Load Balancer
 
 resource "aws_alb" "buildbot_alb" {
@@ -309,7 +371,8 @@ data "template_file" "buildbot_container_definition" {
   vars = {
     image = "${aws_ecr_repository.buildbot_repository.repository_url}:latest"
     name = local.container_name
-    container_port = 8010
+    web_container_port = 8010
+    workers_container_port = 9989
     region = local.region
   }
 }
@@ -332,7 +395,7 @@ resource "aws_ecs_service" "buildbot_ecs_service" {
   desired_count = 1
   launch_type = "FARGATE"
   network_configuration {
-    security_groups = [aws_security_group.ecs_task_sg.id]
+    security_groups = [aws_security_group.ecs_task_sg.id, aws_security_group.network_load_balancer_sg.id]
     subnets = aws_subnet.private.*.id
     assign_public_ip = true
   }
@@ -340,6 +403,11 @@ resource "aws_ecs_service" "buildbot_ecs_service" {
     target_group_arn = aws_alb_target_group.buildbot_target_group.id
     container_name = "buildbot"
     container_port = 8010
+  }
+  load_balancer {
+    target_group_arn = aws_lb_target_group.buildbot_workers_target_group.id
+    container_name = "buildbot"
+    container_port = 9989
   }
   depends_on = [aws_alb_listener.buildbot_listener, aws_iam_role_policy_attachment.ecs_tasks_policy_attachment]
 }
