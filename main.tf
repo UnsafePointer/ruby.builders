@@ -451,6 +451,10 @@ resource "aws_route53_zone" "public_hosted_zone" {
   name = local.domain
 }
 
+resource "aws_route53_zone" "workers_subdomain_public_hosted_zone" {
+  name = "workers.${local.domain}"
+}
+
 resource "aws_route53_record" "domain_record" {
   zone_id = aws_route53_zone.public_hosted_zone.zone_id
   name = local.domain
@@ -458,6 +462,31 @@ resource "aws_route53_record" "domain_record" {
   alias {
     name = aws_alb.buildbot_alb.dns_name
     zone_id = aws_alb.buildbot_alb.zone_id
+    evaluate_target_health = true
+  }
+}
+
+resource "aws_route53_record" "workers_subdomain_ns_record" {
+  zone_id = aws_route53_zone.public_hosted_zone.zone_id
+  name    = "workers.${local.domain}"
+  type    = "NS"
+  ttl     = "30"
+
+  records = [
+    "${aws_route53_zone.workers_subdomain_public_hosted_zone.name_servers.0}",
+    "${aws_route53_zone.workers_subdomain_public_hosted_zone.name_servers.1}",
+    "${aws_route53_zone.workers_subdomain_public_hosted_zone.name_servers.2}",
+    "${aws_route53_zone.workers_subdomain_public_hosted_zone.name_servers.3}",
+  ]
+}
+
+resource "aws_route53_record" "workers_subdomain_a_record" {
+  zone_id = aws_route53_zone.workers_subdomain_public_hosted_zone.zone_id
+  name = "workers.${local.domain}"
+  type = "A"
+  alias {
+    name = aws_lb.buildbot_nlb.dns_name
+    zone_id = aws_lb.buildbot_nlb.zone_id
     evaluate_target_health = true
   }
 }
