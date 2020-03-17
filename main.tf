@@ -17,6 +17,10 @@ variable "buildbot_admin_username" {}
 
 variable "buildbot_admin_password" {}
 
+variable "buildbot_worker_username" {}
+
+variable "buildbot_worker_password" {}
+
 provider "aws" {
   version = "~> 2.0"
   region  = local.region
@@ -487,6 +491,18 @@ resource "aws_ssm_parameter" "buildbot_admin_password" {
   name  = "/buildbot/admin-password"
   type  = "SecureString"
   value = var.buildbot_admin_password
+}
+
+resource "aws_ssm_parameter" "buildbot_worker_username" {
+  name  = "/buildbot/worker/worker-username"
+  type  = "SecureString"
+  value = var.buildbot_worker_username
+}
+
+resource "aws_ssm_parameter" "buildbot_worker_password" {
+  name  = "/buildbot/worker/worker-password"
+  type  = "SecureString"
+  value = var.buildbot_worker_password
 }
 
 # CloudWatch
