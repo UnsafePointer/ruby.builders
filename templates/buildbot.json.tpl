@@ -26,6 +26,14 @@
       {
         "name": "BUILDBOT_ADMIN_PASSWORD",
         "value": "ssm:///buildbot/admin-password"
+      },
+      {
+        "name": "BUILDBOT_WORKER_USERNAME",
+        "value": "ssm:///buildbot/worker/worker-username"
+      },
+      {
+        "name": "BUILDBOT_WORKER_PASSWORD",
+        "value": "ssm:///buildbot/worker/worker-password"
       }
     ],
     "logConfiguration": {
