@@ -400,6 +400,29 @@ resource "aws_iam_policy" "aws_iam_policy_buildbot_worker_ssm" {
 EOF
 }
 
+resource "aws_iam_policy" "aws_iam_policy_buildbot_worker_ec2" {
+  name = "aws_iam_policy_buildbot_worker_ec2"
+  path = "/"
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DeleteTags",
+                "ec2:DescribeTags",
+                "ec2:CreateTags",
+                "ec2:TerminateInstances",
+                "ec2:StopInstances"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_role" "ec2_buildbot_worker_role" {
   name = "${local.vpc_name}_ec2_buildbot_worker_role"
   assume_role_policy = data.aws_iam_policy_document.ec2_instances_policy_document.json
@@ -408,6 +431,11 @@ resource "aws_iam_role" "ec2_buildbot_worker_role" {
 resource "aws_iam_role_policy_attachment" "buildbot_worker_ssm_policy_attachment" {
   role = aws_iam_role.ec2_buildbot_worker_role.name
   policy_arn = aws_iam_policy.aws_iam_policy_buildbot_worker_ssm.arn
+}
+
+resource "aws_iam_role_policy_attachment" "buildbot_worker_ec2_policy_attachment" {
+  role = aws_iam_role.ec2_buildbot_worker_role.name
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_worker_ec2.arn
 }
 
 resource "aws_iam_instance_profile" "ec2_buildbot_worker_instance_profile" {

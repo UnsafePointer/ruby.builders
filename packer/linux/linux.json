@@ -44,12 +44,30 @@
       "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     },
     {
+      "type": "file",
+      "source": "linux/buildbot-worker.service",
+      "destination": "/home/ubuntu/buildbot-worker.service"
+    },
+    {
+      "type": "file",
+      "source": "linux/self-terminate.sh",
+      "destination": "/home/ubuntu/self-terminate.sh"
+    },
+    {
       "type": "shell",
       "inline": [
         "WORKER_USERNAME=`aws ssm get-parameter --with-decryption --name '/buildbot/worker/worker-username' | jq -r '.Parameter.Value'`",
         "WORKER_PASSWORD=`aws ssm get-parameter --with-decryption --name '/buildbot/worker/worker-password' | jq -r '.Parameter.Value'`",
-        "buildbot-worker create-worker $PWD workers.ruby.builders $WORKER_USERNAME $WORKER_PASSWORD"
+        "buildbot-worker create-worker $PWD workers.ruby.builders $WORKER_USERNAME $WORKER_PASSWORD",
+        "chmod +x /home/ubuntu/self-terminate.sh"
       ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "systemctl enable /home/ubuntu/buildbot-worker.service"
+      ],
+      "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     }
   ]
 }
