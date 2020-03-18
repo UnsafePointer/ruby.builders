@@ -338,6 +338,40 @@ data "aws_iam_policy_document" "ecs_tasks_policy_document" {
 
 data "aws_caller_identity" "current" {}
 
+resource "aws_iam_policy" "aws_iam_policy_buildbot_ec2" {
+  name = "aws_iam_policy_buildbot_ec2"
+  path = "/"
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:Describe*",
+                "ec2:GetConsole*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+              "ec2:RunInstances",
+              "ec2:AssociateIamInstanceProfile",
+              "ec2:ReplaceIamInstanceProfileAssociation"
+            ],
+            "Resource": "*"
+        },
+        {
+          "Effect": "Allow",
+          "Action": "iam:PassRole",
+          "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
 resource "aws_iam_policy" "aws_iam_policy_buildbot_ssm" {
   name        = "aws_iam_policy_buildbot_ssm"
   path        = "/"
@@ -382,6 +416,11 @@ resource "aws_iam_role_policy_attachment" "ecs_tasks_policy_attachment" {
 resource "aws_iam_role_policy_attachment" "ecs_tasks_ssm_policy_attachment" {
   role = aws_iam_role.ecs_tasks_role.name
   policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ssm.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_tasks_ec2_policy_attachment" {
+  role = aws_iam_role.ecs_tasks_role.name
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ec2.arn
 }
 
 data "aws_iam_policy_document" "ec2_instances_policy_document" {
