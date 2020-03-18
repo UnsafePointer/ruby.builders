@@ -199,6 +199,26 @@ resource "aws_security_group" "network_load_balancer_sg" {
   }
 }
 
+resource "aws_security_group" "allow_ssh_sh" {
+  name = "allow_ssh_sh"
+  vpc_id = "vpc-063d97317ad396653"
+  ingress {
+    protocol = "tcp"
+    from_port = 22
+    to_port = 22
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "allow_ssh_sh"
+  }
+}
+
 # Network Load Balancer
 
 resource "aws_lb" "buildbot_nlb" {
@@ -440,7 +460,7 @@ resource "aws_iam_role_policy_attachment" "buildbot_worker_ec2_policy_attachment
 
 resource "aws_iam_instance_profile" "ec2_buildbot_worker_instance_profile" {
   name = "ec2_buildbot_worker_instance_profile"
-  role = "${aws_iam_role.ec2_buildbot_worker_role.name}"
+  role = aws_iam_role.ec2_buildbot_worker_role.name
 }
 
 # ECS task with Fargate launch type
