@@ -24,7 +24,7 @@ resource "aws_security_group" "allow_ssh_sh" {
 }
 
 resource "aws_instance" "linux" {
-  ami = "ami-0be2ad9d86192709c"
+  ami = "ami-071ed599e620d2300"
   instance_type = "t2.micro"
   key_name = "buildbot-key"
   subnet_id = "subnet-0fc32b6dc9692fd13 "
