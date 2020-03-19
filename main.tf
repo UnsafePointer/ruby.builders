@@ -23,6 +23,8 @@ variable "buildbot_worker_password" {}
 
 variable "buildbot_github_hook_secret" {}
 
+variable "buildbot_github_api_token" {}
+
 provider "aws" {
   version = "~> 2.0"
   region  = local.region
@@ -598,6 +600,12 @@ resource "aws_ssm_parameter" "buildbot_github_hook_secret" {
   name  = "/buildbot/github_hook_secret"
   type  = "SecureString"
   value = var.buildbot_github_hook_secret
+}
+
+resource "aws_ssm_parameter" "buildbot_github_api_token" {
+  name  = "/buildbot/github_api_token"
+  type  = "SecureString"
+  value = var.buildbot_github_api_token
 }
 
 # CloudWatch

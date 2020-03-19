@@ -38,6 +38,10 @@
       {
         "name": "BUILDBOT_GITHUB_HOOK_SECRET",
         "value": "ssm:///buildbot/github_hook_secret"
+      },
+      {
+        "name": "BUILDBOT_GITHUB_API_TOKEN",
+        "value": "ssm:///buildbot/github_api_token"
       }
     ],
     "logConfiguration": {
