@@ -34,6 +34,10 @@
       {
         "name": "BUILDBOT_WORKER_PASSWORD",
         "value": "ssm:///buildbot/worker/worker-password"
+      },
+      {
+        "name": "BUILDBOT_GITHUB_HOOK_SECRET",
+        "value": "ssm:///buildbot/github_hook_secret"
       }
     ],
     "logConfiguration": {
