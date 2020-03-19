@@ -1,5 +1,10 @@
 # Buildbot Docker image
 
+## Requirements
+
+* [AWS CLI version 2](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
+* [Docker](https://www.docker.com/)
+
 ## Usage
 
 Create a file .env with the following contents:
