@@ -4,8 +4,8 @@ provider "aws" {
 }
 
 resource "aws_instance" "linux" {
-  ami = "ami-071ed599e620d2300"
-  instance_type = "t2.micro"
+  ami = "ami-07225c100ab116fa9"
+  instance_type = "t2.medium"
   key_name = "buildbot-key"
   subnet_id = "subnet-0fc32b6dc9692fd13 "
   iam_instance_profile = "ec2_buildbot_worker_instance_profile"
