@@ -223,6 +223,26 @@ resource "aws_security_group" "allow_ssh_sh" {
   }
 }
 
+resource "aws_security_group" "allow_rdp_sg" {
+  name = "allow_rdp_sg"
+  vpc_id = "vpc-063d97317ad396653"
+  ingress {
+    protocol = "tcp"
+    from_port = 3389
+    to_port = 3389
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "allow_rdp_sg"
+  }
+}
+
 # Network Load Balancer
 
 resource "aws_lb" "buildbot_nlb" {
