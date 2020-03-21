@@ -17,7 +17,9 @@ variable "buildbot_admin_username" {}
 
 variable "buildbot_admin_password" {}
 
-variable "buildbot_worker_username" {}
+variable "buildbot_linux_worker_username" {}
+
+variable "buildbot_windows_worker_username" {}
 
 variable "buildbot_worker_password" {}
 
@@ -604,10 +606,16 @@ resource "aws_ssm_parameter" "buildbot_admin_password" {
   value = var.buildbot_admin_password
 }
 
-resource "aws_ssm_parameter" "buildbot_worker_username" {
-  name  = "/buildbot/worker/worker-username"
+resource "aws_ssm_parameter" "buildbot_linux_worker_username" {
+  name  = "/buildbot/worker/linux-worker-username"
   type  = "SecureString"
-  value = var.buildbot_worker_username
+  value = var.buildbot_linux_worker_username
+}
+
+resource "aws_ssm_parameter" "buildbot_windows_worker_username" {
+  name  = "/buildbot/worker/windows-worker-username"
+  type  = "SecureString"
+  value = var.buildbot_windows_worker_username
 }
 
 resource "aws_ssm_parameter" "buildbot_worker_password" {

@@ -28,8 +28,12 @@
         "value": "ssm:///buildbot/admin-password"
       },
       {
-        "name": "BUILDBOT_WORKER_USERNAME",
-        "value": "ssm:///buildbot/worker/worker-username"
+        "name": "BUILDBOT_LINUX_WORKER_USERNAME",
+        "value": "ssm:///buildbot/worker/linux-worker-username"
+      },
+      {
+        "name": "BUILDBOT_WINDOWS_WORKER_USERNAME",
+        "value": "ssm:///buildbot/worker/windows-worker-username"
       },
       {
         "name": "BUILDBOT_WORKER_PASSWORD",
