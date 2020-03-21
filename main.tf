@@ -17,7 +17,9 @@ variable "buildbot_admin_username" {}
 
 variable "buildbot_admin_password" {}
 
-variable "buildbot_worker_username" {}
+variable "buildbot_linux_worker_username" {}
+
+variable "buildbot_windows_worker_username" {}
 
 variable "buildbot_worker_password" {}
 
@@ -220,6 +222,26 @@ resource "aws_security_group" "allow_ssh_sh" {
   }
   tags = {
     Name = "allow_ssh_sh"
+  }
+}
+
+resource "aws_security_group" "allow_rdp_sg" {
+  name = "allow_rdp_sg"
+  vpc_id = "vpc-063d97317ad396653"
+  ingress {
+    protocol = "tcp"
+    from_port = 3389
+    to_port = 3389
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    protocol = "-1"
+    from_port = 0
+    to_port = 0
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  tags = {
+    Name = "allow_rdp_sg"
   }
 }
 
@@ -584,10 +606,16 @@ resource "aws_ssm_parameter" "buildbot_admin_password" {
   value = var.buildbot_admin_password
 }
 
-resource "aws_ssm_parameter" "buildbot_worker_username" {
-  name  = "/buildbot/worker/worker-username"
+resource "aws_ssm_parameter" "buildbot_linux_worker_username" {
+  name  = "/buildbot/worker/linux-worker-username"
   type  = "SecureString"
-  value = var.buildbot_worker_username
+  value = var.buildbot_linux_worker_username
+}
+
+resource "aws_ssm_parameter" "buildbot_windows_worker_username" {
+  name  = "/buildbot/worker/windows-worker-username"
+  type  = "SecureString"
+  value = var.buildbot_windows_worker_username
 }
 
 resource "aws_ssm_parameter" "buildbot_worker_password" {
