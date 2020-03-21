@@ -26,13 +26,15 @@
 ├── packer # Contains everything necessary to build the Buildbot worker AMI
 │   ├── README.md
 │   ├── build-ami.sh # Bash script to build and publis the AMI
-│   └── linux
-│       ├── Dockerfile # Dockerfile to test AMI steps locally
-│       ├── README.md
-│       ├── buildbot-worker.service # systemd service unit for Buildbot worker process
-│       ├── linux.json
-│       ├── main.tf # Terraform project to test the AMI
-│       └── self-terminate.sh # Bash script to self-terminate EC2 instances
+│   ├── linux
+│   │   ├── Dockerfile # Dockerfile to test AMI steps locally
+│   │   ├── buildbot-worker.service # systemd service unit for Buildbot worker process
+│   │   ├── linux.json
+│   │   ├── main.tf # Terraform project to test the AMI
+│   │   └── self-terminate.sh # Bash script to self-terminate EC2 instances
+│   └── windows
+│       ├── main.tf
+│       └── self-terminate.bat # Bash script to self-terminate EC2 instances
 └── templates
     └── buildbot.json.tpl
 ```
