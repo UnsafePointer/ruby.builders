@@ -1,0 +1,105 @@
+{
+  "variables": {
+    "email": "",
+    "domain": ""
+  },
+  "builders": [
+    {
+      "type": "amazon-ebs",
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "ubuntu/images/*ubuntu-bionic-18.04-amd64-server-*",
+          "root-device-type": "ebs"
+        },
+        "owners": [
+          "099720109477"
+        ],
+        "most_recent": true
+      },
+      "instance_type": "t3.nano",
+      "ssh_username": "ubuntu",
+      "ami_name": "buildbot-master-{{timestamp}}",
+      "iam_instance_profile": "ec2_buildbot_master_instance_profile"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | apt-key add -",
+        "apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ bionic main'",
+        "apt-get update",
+        "apt-get -y install software-properties-common curl zip jq python3-distutils",
+        "curl 'https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip' -o 'awscliv2.zip'",
+        "unzip awscliv2.zip",
+        "rm -rf awscliv2.zip",
+        "./aws/install",
+        "rm -rf aws",
+        "curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py",
+        "python3 get-pip.py",
+        "rm -rf get-pip.py",
+        "pip install buildbot[bundle] boto3 txrequests",
+        "add-apt-repository -y universe",
+        "add-apt-repository -y ppa:certbot/certbot",
+        "apt-get install -y certbot python3-certbot-dns-route53",
+        "apt-get install -y nginx"
+      ],
+      "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "file",
+      "source": "buildbot-master.service",
+      "destination": "/home/ubuntu/buildbot-master.service"
+    },
+    {
+      "type": "file",
+      "source": "buildbot.tac",
+      "destination": "/home/ubuntu/buildbot.tac"
+    },
+    {
+      "type": "file",
+      "source": "master.cfg",
+      "destination": "/home/ubuntu/master.cfg"
+    },
+    {
+      "type": "file",
+      "source": "self-terminate.sh",
+      "destination": "/home/ubuntu/self-terminate.sh"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "chmod +x /home/ubuntu/self-terminate.sh"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "systemctl enable /home/ubuntu/buildbot-master.service"
+      ],
+      "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "certbot certonly --non-interactive --email {{user `email`}} --agree-tos --dns-route53 -d {{user `domain`}}"
+      ],
+      "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    },
+    {
+      "type": "file",
+      "source": "ruby.builders.conf",
+      "destination": "/home/ubuntu/ruby.builders.conf"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "cp /home/ubuntu/ruby.builders.conf /etc/nginx/conf.d/ruby.builders.conf",
+        "rm -rf /etc/nginx/sites-enabled/default",
+        "service nginx reload"
+      ],
+      "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
+    }
+  ]
+}
