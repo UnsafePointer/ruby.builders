@@ -45,12 +45,12 @@
     },
     {
       "type": "file",
-      "source": "linux/buildbot-worker.service",
+      "source": "buildbot-worker.service",
       "destination": "/home/ubuntu/buildbot-worker.service"
     },
     {
       "type": "file",
-      "source": "linux/self-terminate.sh",
+      "source": "self-terminate.sh",
       "destination": "/home/ubuntu/self-terminate.sh"
     },
     {

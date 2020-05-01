@@ -1,4 +1,4 @@
-# Buildbot worker AMI
+# Buildbot AMIs
 
 ## Requirements
 
@@ -9,5 +9,6 @@
 Execute the following:
 
 ```bash
+$ cd linux # or any other directory
 $ ./build-ami.sh
 ```
