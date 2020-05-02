@@ -400,6 +400,30 @@ resource "aws_ssm_parameter" "buildbot_github_api_token" {
   value = var.buildbot_github_api_token
 }
 
+resource "aws_ssm_parameter" "buildbot_allow_ssh_sg" {
+  name  = "/buildbot/allow_ssh_sg"
+  type  = "String"
+  value = aws_security_group.allow_ssh_sh.id
+}
+
+resource "aws_ssm_parameter" "buildbot_allow_rdp_sg" {
+  name  = "/buildbot/allow_rdp_sg"
+  type  = "String"
+  value = aws_security_group.allow_rdp_sg.id
+}
+
+resource "aws_ssm_parameter" "buildbot_subnet" {
+  name  = "/buildbot/subnet"
+  type  = "String"
+  value = element(aws_subnet.public.*.id, 0)
+}
+
+resource "aws_ssm_parameter" "buildbot_workers_instance_profile" {
+  name  = "/buildbot/workers_instance_profile"
+  type  = "String"
+  value = aws_iam_instance_profile.ec2_buildbot_worker_instance_profile.name
+}
+
 # Route 53
 
 resource "aws_route53_zone" "public_hosted_zone" {

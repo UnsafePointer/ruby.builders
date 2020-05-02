@@ -14,6 +14,10 @@ Environment=BUILDBOT_WINDOWS_WORKER_USERNAME=ssm:///buildbot/worker/windows-work
 Environment=BUILDBOT_WORKER_PASSWORD=ssm:///buildbot/worker/worker-password
 Environment=BUILDBOT_GITHUB_HOOK_SECRET=ssm:///buildbot/github_hook_secret
 Environment=BUILDBOT_GITHUB_API_TOKEN=ssm:///buildbot/github_api_token
+Environment=BUILDBOT_ALLOW_SSH_SG=ssm:///buildbot/allow_ssh_sg
+Environment=BUILDBOT_ALLOW_RDP_SG=ssm:///buildbot/allow_rdp_sg
+Environment=BUILDBOT_SUBNET=ssm:///buildbot/buildbot_subnet
+Environment=BUILDBOT_WORKERS_INSTANCE_PROFILE=ssm:///buildbot/buildbot_workers_instance_profile
 ExecStart=/usr/local/bin/buildbot start --nodaemon /home/ubuntu/
 ExecStopPost= /home/ubuntu/self-terminate.sh
 ProtectSystem=full
