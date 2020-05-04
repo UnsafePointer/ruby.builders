@@ -23,7 +23,7 @@ Environment=BUILDBOT_WORKER_INSTANCE_TYPE=ssm:///buildbot/worker_instance_type
 Environment=BUILDBOT_LINUX_WORKER_AMI_ID=ssm:///buildbot/linux_worker_ami_id
 Environment=BUILDBOT_WINDOWS_WORKER_AMI_ID=ssm:///buildbot/windows_worker_ami_id
 ExecStart=/usr/local/bin/buildbot start --nodaemon /home/ubuntu/
-ExecStopPost= /home/ubuntu/self-terminate.sh
+ExecStopPost=/home/ubuntu/self-terminate.sh
 ProtectSystem=full
 PrivateDevices=yes
 PrivateTmp=yes
