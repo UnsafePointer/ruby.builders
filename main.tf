@@ -371,6 +371,38 @@ resource "aws_autoscaling_group" "buildbot_asg" {
 
 # SSM parameters
 
+data "aws_ami" "buildbot_linux_worker_ami" {
+  most_recent = true
+  name_regex = "^buildbot-worker-\\d{10}"
+  owners = ["self"]
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+data "aws_ami" "buildbot_windows_worker_ami" {
+  most_recent = true
+  name_regex = "^buildbot-worker-windows"
+  owners = ["self"]
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_ssm_parameter" "buildbot_web_url" {
   name  = "/buildbot/web-url"
   type  = "String"
@@ -453,6 +485,24 @@ resource "aws_ssm_parameter" "buildbot_keypair_name" {
   name  = "/buildbot/keypair_name"
   type  = "String"
   value = aws_key_pair.buildbot.key_name
+}
+
+resource "aws_ssm_parameter" "buildbot_worker_instance_type" {
+  name  = "/buildbot/worker_instance_type"
+  type  = "String"
+  value = "t2.medium"
+}
+
+resource "aws_ssm_parameter" "buildbot_linux_worker_ami_id" {
+  name  = "/buildbot/linux_worker_ami_id"
+  type  = "String"
+  value = data.aws_ami.buildbot_linux_worker_ami.image_id
+}
+
+resource "aws_ssm_parameter" "buildbot_windows_worker_ami_id" {
+  name  = "/buildbot/windows_worker_ami_id"
+  type  = "String"
+  value = data.aws_ami.buildbot_windows_worker_ami.image_id
 }
 
 # Route 53

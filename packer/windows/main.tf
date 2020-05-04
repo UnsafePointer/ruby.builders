@@ -39,9 +39,13 @@ data "aws_ssm_parameter" "buildbot_allow_rdp_sg" {
   name = "/buildbot/allow_rdp_sg"
 }
 
+data "aws_ssm_parameter" "buildbot_worker_instance_type" {
+  name = "/buildbot/worker_instance_type"
+}
+
 resource "aws_instance" "windows" {
   ami = data.aws_ami.buildbot_worker_ami.image_id
-  instance_type = "t2.medium"
+  instance_type = data.aws_ssm_parameter.buildbot_worker_instance_type.value
   key_name = data.aws_ssm_parameter.buildbot_keypair_name.value
   subnet_id = data.aws_ssm_parameter.buildbot_subnet.value
   iam_instance_profile = data.aws_ssm_parameter.buildbot_worker_instance_profile.value
