@@ -3,10 +3,15 @@ provider "aws" {
   region = "us-east-1"
 }
 
-data "aws_ami" "buildbot_worker_ami" {
+data "aws_ami" "buildbot_master_ami" {
   most_recent = true
-  name_regex = "^buildbot-worker-\\d{10}"
+  name_regex = "^buildbot-master"
   owners = ["self"]
+
+  filter {
+    name   = "name"
+    values = ["buildbot-master"]
+  }
 
   filter {
     name   = "root-device-type"
@@ -27,24 +32,20 @@ data "aws_ssm_parameter" "buildbot_subnet" {
   name = "/buildbot/subnet"
 }
 
-data "aws_ssm_parameter" "buildbot_worker_instance_profile" {
-  name = "/buildbot/workers_instance_profile"
+data "aws_ssm_parameter" "buildbot_master_instance_profile" {
+  name = "/buildbot/master_instance_profile"
 }
 
 data "aws_ssm_parameter" "buildbot_allow_ssh_sg" {
   name = "/buildbot/allow_ssh_sg"
 }
 
-data "aws_ssm_parameter" "buildbot_worker_instance_type" {
-  name = "/buildbot/worker_instance_type"
-}
-
 resource "aws_instance" "linux" {
-  ami = data.aws_ami.buildbot_worker_ami.image_id
-  instance_type = data.aws_ssm_parameter.buildbot_worker_instance_type.value
+  ami = data.aws_ami.buildbot_master_ami.image_id
+  instance_type = "t3.nano"
   key_name = data.aws_ssm_parameter.buildbot_keypair_name.value
   subnet_id = data.aws_ssm_parameter.buildbot_subnet.value
-  iam_instance_profile = data.aws_ssm_parameter.buildbot_worker_instance_profile.value
+  iam_instance_profile = data.aws_ssm_parameter.buildbot_master_instance_profile.value
   vpc_security_group_ids = [data.aws_ssm_parameter.buildbot_allow_ssh_sg.value]
 }
 

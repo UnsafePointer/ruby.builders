@@ -38,24 +38,14 @@ locals {
   vpc_name = "buildbot_micro"
   domain = "ruby.builders"
   region = "us-east-1"
-  availability_zones = ["us-east-1a", "us-east-1b"]
-  container_name = "buildbot"
+  availability_zones = ["us-east-1a"]
+  master_instance_type = "t3.nano"
 }
 
 resource "aws_vpc" "buildbot_micro" {
   cidr_block = "172.18.0.0/24"
   tags = {
     Name = local.vpc_name
-  }
-}
-
-resource "aws_subnet" "private" {
-  count = length(local.availability_zones)
-  cidr_block = cidrsubnet(aws_vpc.buildbot_micro.cidr_block, 3, count.index)
-  availability_zone = local.availability_zones[count.index]
-  vpc_id = aws_vpc.buildbot_micro.id
-  tags = {
-    Name = "${local.vpc_name}_private_${local.availability_zones[count.index]}"
   }
 }
 
@@ -68,6 +58,10 @@ resource "aws_subnet" "public" {
   tags = {
     Name = "${local.vpc_name}_public_${local.availability_zones[count.index]}"
   }
+}
+
+resource "aws_eip" "eip" {
+  vpc = true
 }
 
 # Public subnet internet routing
@@ -85,68 +79,10 @@ resource "aws_route" "internet_access" {
   gateway_id = aws_internet_gateway.igw.id
 }
 
-resource "aws_eip" "eip_gw" {
-  count = length(local.availability_zones)
-  vpc = true
-  depends_on = [aws_internet_gateway.igw]
-  tags = {
-    Name = "${local.vpc_name}_eip_gw_${local.availability_zones[count.index]}"
-  }
-}
-
-resource "aws_nat_gateway" "nat_gw" {
-  count = length(local.availability_zones)
-  subnet_id = element(aws_subnet.public.*.id, count.index)
-  allocation_id = element(aws_eip.eip_gw.*.id, count.index)
-  tags = {
-    Name = "${local.vpc_name}_nat_gw_${local.availability_zones[count.index]}"
-  }
-}
-
-# Private subnet internet routing
-
-resource "aws_route_table" "internet_access" {
-  count = length(local.availability_zones)
-  vpc_id = aws_vpc.buildbot_micro.id
-  route {
-    cidr_block = "0.0.0.0/0"
-    nat_gateway_id = element(aws_nat_gateway.nat_gw.*.id, count.index)
-  }
-  tags = {
-    Name = "${local.vpc_name}_route_table_internet_access_${local.availability_zones[count.index]}"
-  }
-}
-
-resource "aws_route_table_association" "internet_access_association" {
-  count = length(local.availability_zones)
-  subnet_id = element(aws_subnet.private.*.id, count.index)
-  route_table_id = element(aws_route_table.internet_access.*.id, count.index)
-}
-
 # security
 
-resource "aws_security_group" "load_balancer_sg" {
-  name = "${local.vpc_name}_load_balancer_sg"
-  vpc_id = aws_vpc.buildbot_micro.id
-  ingress {
-    protocol = "tcp"
-    from_port = 80
-    to_port = 80
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  egress {
-    protocol = "-1"
-    from_port = 0
-    to_port = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "${local.vpc_name}_load_balancer_sg"
-  }
-}
-
-resource "aws_security_group" "load_balancer_ssl_sg" {
-  name = "${local.vpc_name}_load_balancer_ssl_sg"
+resource "aws_security_group" "allow_ssl_sg" {
+  name = "allow_ssl_sg"
   vpc_id = aws_vpc.buildbot_micro.id
   ingress {
     protocol = "tcp"
@@ -161,32 +97,12 @@ resource "aws_security_group" "load_balancer_ssl_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "${local.vpc_name}_load_balancer_ssl_sg"
+    Name = "allow_ssl_sg"
   }
 }
 
-resource "aws_security_group" "ecs_task_sg" {
-  name = "${local.vpc_name}_ecs_task_sg"
-  vpc_id = aws_vpc.buildbot_micro.id
-  ingress {
-    protocol = "tcp"
-    from_port = 8010
-    to_port = 8010
-    security_groups = [aws_security_group.load_balancer_sg.id, aws_security_group.load_balancer_ssl_sg.id]
-  }
-  egress {
-    protocol = "-1"
-    from_port = 0
-    to_port = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  tags = {
-    Name = "${local.vpc_name}_ecs_task_sg"
-  }
-}
-
-resource "aws_security_group" "network_load_balancer_sg" {
-  name = "${local.vpc_name}_network_load_balancer_sg"
+resource "aws_security_group" "buildbot_workers_sg" {
+  name = "buildbot_workers_sg"
   vpc_id = aws_vpc.buildbot_micro.id
   ingress {
     protocol = "tcp"
@@ -201,13 +117,13 @@ resource "aws_security_group" "network_load_balancer_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   tags = {
-    Name = "${local.vpc_name}network_load_balancer_sg"
+    Name = "buildbot_workers_sg"
   }
 }
 
 resource "aws_security_group" "allow_ssh_sh" {
   name = "allow_ssh_sh"
-  vpc_id = "vpc-063d97317ad396653"
+  vpc_id = aws_vpc.buildbot_micro.id
   ingress {
     protocol = "tcp"
     from_port = 22
@@ -227,7 +143,7 @@ resource "aws_security_group" "allow_ssh_sh" {
 
 resource "aws_security_group" "allow_rdp_sg" {
   name = "allow_rdp_sg"
-  vpc_id = "vpc-063d97317ad396653"
+  vpc_id = aws_vpc.buildbot_micro.id
   ingress {
     protocol = "tcp"
     from_port = 3389
@@ -245,124 +161,19 @@ resource "aws_security_group" "allow_rdp_sg" {
   }
 }
 
-# Network Load Balancer
-
-resource "aws_lb" "buildbot_nlb" {
-  name = "buildbot-nlb"
-  load_balancer_type = "network"
-  subnets = aws_subnet.public.*.id
-  tags = {
-    Name = "${local.vpc_name}_network_load_balancer"
-  }
-}
-
-resource "aws_lb_target_group" "buildbot_workers_target_group" {
-  name = "buildbotworkers-nlb-target-group"
-  port = 9989
-  protocol = "TCP"
-  vpc_id = aws_vpc.buildbot_micro.id
-  target_type = "ip"
-  health_check {
-    healthy_threshold = "3"
-    interval = "30"
-    unhealthy_threshold = "3"
-    protocol = "TCP"
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-  tags = {
-    Name = "${local.vpc_name}_workers_target_group"
-  }
-}
-
-resource "aws_alb_listener" "buildbot_workers_listener" {
-  load_balancer_arn = aws_lb.buildbot_nlb.id
-  port = 9989
-  protocol = "TCP"
-
-  default_action {
-    target_group_arn = aws_lb_target_group.buildbot_workers_target_group.id
-    type = "forward"
-  }
-}
-
-# Application Load Balancer
-
-resource "aws_alb" "buildbot_alb" {
-  name = "buildbot-alb"
-  subnets = aws_subnet.public.*.id
-  security_groups = [aws_security_group.load_balancer_sg.id, aws_security_group.load_balancer_ssl_sg.id]
-  tags = {
-    Name = "${local.vpc_name}_load_balancer"
-  }
-}
-
-resource "aws_alb_target_group" "buildbot_target_group" {
-  name = "buildbot-alb-target-group"
-  port = 8010
-  protocol = "HTTP"
-  vpc_id = aws_vpc.buildbot_micro.id
-  target_type = "ip"
-  health_check {
-    healthy_threshold = "3"
-    interval = "30"
-    protocol = "HTTP"
-    matcher = "200"
-    timeout = "3"
-    path = "/"
-    unhealthy_threshold = "2"
-  }
-  lifecycle {
-    create_before_destroy = true
-  }
-  tags = {
-    Name = "${local.vpc_name}_target_group"
-  }
-}
-
-resource "aws_alb_listener" "buildbot_ssl_listener" {
-  load_balancer_arn = aws_alb.buildbot_alb.id
-  port = 443
-  protocol = "HTTPS"
-  ssl_policy = "ELBSecurityPolicy-2016-08"
-  certificate_arn = aws_acm_certificate.ssl_certificate.arn
-
-  default_action {
-    target_group_arn = aws_alb_target_group.buildbot_target_group.id
-    type = "forward"
-  }
-}
-
-resource "aws_alb_listener" "buildbot_listener" {
-  load_balancer_arn = aws_alb.buildbot_alb.id
-  port = 80
-  protocol = "HTTP"
-
-  default_action {
-    type = "redirect"
-
-    redirect {
-      port = "443"
-      protocol = "HTTPS"
-      status_code = "HTTP_301"
-    }
-  }
-}
-
 # IAM ECS tasks policy
 
-data "aws_iam_policy_document" "ecs_tasks_policy_document" {
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "ec2_instances_policy_document" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
       type = "Service"
-      identifiers = ["ecs-tasks.amazonaws.com"]
+      identifiers = ["ec2.amazonaws.com"]
     }
   }
 }
-
-data "aws_caller_identity" "current" {}
 
 resource "aws_iam_policy" "aws_iam_policy_buildbot_ec2" {
   name = "aws_iam_policy_buildbot_ec2"
@@ -384,7 +195,19 @@ resource "aws_iam_policy" "aws_iam_policy_buildbot_ec2" {
             "Action": [
               "ec2:RunInstances",
               "ec2:AssociateIamInstanceProfile",
-              "ec2:ReplaceIamInstanceProfileAssociation"
+              "ec2:ReplaceIamInstanceProfileAssociation",
+              "ec2:AssociateAddress"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DeleteTags",
+                "ec2:DescribeTags",
+                "ec2:CreateTags",
+                "ec2:TerminateInstances",
+                "ec2:StopInstances"
             ],
             "Resource": "*"
         },
@@ -424,43 +247,8 @@ resource "aws_iam_policy" "aws_iam_policy_buildbot_ssm" {
 EOF
 }
 
-resource "aws_iam_role" "ecs_tasks_execution_role" {
-  name = "${local.vpc_name}_ecs_task_execution_role"
-  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_policy_document.json
-}
-
-resource "aws_iam_role" "ecs_tasks_role" {
-  name = "${local.vpc_name}_ecs_tasks_role"
-  assume_role_policy = data.aws_iam_policy_document.ecs_tasks_policy_document.json
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_tasks_policy_attachment" {
-  role = aws_iam_role.ecs_tasks_execution_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_tasks_ssm_policy_attachment" {
-  role = aws_iam_role.ecs_tasks_role.name
-  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ssm.arn
-}
-
-resource "aws_iam_role_policy_attachment" "ecs_tasks_ec2_policy_attachment" {
-  role = aws_iam_role.ecs_tasks_role.name
-  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ec2.arn
-}
-
-data "aws_iam_policy_document" "ec2_instances_policy_document" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_policy" "aws_iam_policy_buildbot_worker_ssm" {
-  name        = "aws_iam_policy_buildbot_worker_ssm"
+resource "aws_iam_policy" "aws_iam_policy_buildbot_route53" {
+  name        = "aws_iam_policy_buildbot_route53"
   path        = "/"
   policy = <<EOF
 {
@@ -469,43 +257,40 @@ resource "aws_iam_policy" "aws_iam_policy_buildbot_worker_ssm" {
         {
             "Effect": "Allow",
             "Action": [
-                "ssm:DescribeParameters"
+                "route53:ListHostedZones",
+                "route53:GetChange",
+                "route53:ChangeResourceRecordSets"
             ],
             "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ssm:GetParameter"
-            ],
-            "Resource": "arn:aws:ssm:${local.region}:${data.aws_caller_identity.current.account_id}:parameter/buildbot/worker/*"
         }
     ]
 }
 EOF
 }
 
-resource "aws_iam_policy" "aws_iam_policy_buildbot_worker_ec2" {
-  name = "aws_iam_policy_buildbot_worker_ec2"
-  path = "/"
-  policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "ec2:DeleteTags",
-                "ec2:DescribeTags",
-                "ec2:CreateTags",
-                "ec2:TerminateInstances",
-                "ec2:StopInstances"
-            ],
-            "Resource": "*"
-        }
-    ]
+resource "aws_iam_role" "ec2_buildbot_master_role" {
+  name = "${local.vpc_name}_ec2_buildbot_master_role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_instances_policy_document.json
 }
-EOF
+
+resource "aws_iam_role_policy_attachment" "ecs_tasks_route53_policy_attachment" {
+  role = aws_iam_role.ec2_buildbot_master_role.name
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_route53.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_tasks_ssm_policy_attachment" {
+  role = aws_iam_role.ec2_buildbot_master_role.name
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ssm.arn
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_tasks_ec2_policy_attachment" {
+  role = aws_iam_role.ec2_buildbot_master_role.name
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ec2.arn
+}
+
+resource "aws_iam_instance_profile" "ec2_buildbot_master_instance_profile" {
+  name = "ec2_buildbot_master_instance_profile"
+  role = aws_iam_role.ec2_buildbot_master_role.name
 }
 
 resource "aws_iam_role" "ec2_buildbot_worker_role" {
@@ -515,12 +300,12 @@ resource "aws_iam_role" "ec2_buildbot_worker_role" {
 
 resource "aws_iam_role_policy_attachment" "buildbot_worker_ssm_policy_attachment" {
   role = aws_iam_role.ec2_buildbot_worker_role.name
-  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_worker_ssm.arn
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ssm.arn
 }
 
 resource "aws_iam_role_policy_attachment" "buildbot_worker_ec2_policy_attachment" {
   role = aws_iam_role.ec2_buildbot_worker_role.name
-  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_worker_ec2.arn
+  policy_arn = aws_iam_policy.aws_iam_policy_buildbot_ec2.arn
 }
 
 resource "aws_iam_instance_profile" "ec2_buildbot_worker_instance_profile" {
@@ -528,65 +313,95 @@ resource "aws_iam_instance_profile" "ec2_buildbot_worker_instance_profile" {
   role = aws_iam_role.ec2_buildbot_worker_role.name
 }
 
-# ECS task with Fargate launch type
+# EC2
 
-resource "aws_ecs_cluster" "ecs_cluster" {
-  name = "${local.vpc_name}_ecs_cluster"
-}
+data "aws_ami" "buildbot_master_ami" {
+  most_recent = true
+  name_regex = "^buildbot-master"
+  owners = ["self"]
 
-data "template_file" "buildbot_container_definition" {
-  template = file("./templates/buildbot.json.tpl")
-  vars = {
-    image = "${aws_ecr_repository.buildbot_repository.repository_url}:latest"
-    name = local.container_name
-    web_container_port = 8010
-    workers_container_port = 9989
-    region = local.region
+  filter {
+    name   = "name"
+    values = ["buildbot-master"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
   }
 }
 
-resource "aws_ecs_task_definition" "buildbot_ecs_task_definition" {
-  family = "${local.vpc_name}_task"
-  task_role_arn = aws_iam_role.ecs_tasks_role.arn
-  execution_role_arn = aws_iam_role.ecs_tasks_execution_role.arn
-  network_mode = "awsvpc"
-  requires_compatibilities = ["FARGATE"]
-  cpu = 256
-  memory = 512
-  container_definitions = data.template_file.buildbot_container_definition.rendered
+resource "aws_launch_configuration" "buildbot_launch_cfg" {
+  name_prefix = "buildbot_launch_cfg"
+  image_id = data.aws_ami.buildbot_master_ami.image_id
+  instance_type = local.master_instance_type
+  associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.ec2_buildbot_master_instance_profile.name
+  key_name = aws_key_pair.buildbot.key_name
+  security_groups = [aws_security_group.allow_ssh_sh.id, aws_security_group.allow_ssl_sg.id, aws_security_group.buildbot_workers_sg.id]
+  root_block_device {
+    delete_on_termination = true
+    volume_size = 10
+    volume_type = "gp2"
+  }
+  user_data = <<EOF
+#cloud-config
+runcmd:
+  - aws ec2 associate-address --instance-id $(curl http://169.254.169.254/latest/meta-data/instance-id) --allocation-id ${aws_eip.eip.id} --allow-reassociation
+  - certbot renew
+EOF
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
-resource "aws_ecs_service" "buildbot_ecs_service" {
-  name = "${local.vpc_name}_ecs_service"
-  cluster = aws_ecs_cluster.ecs_cluster.id
-  task_definition = aws_ecs_task_definition.buildbot_ecs_task_definition.arn
-  desired_count = 1
-  launch_type = "FARGATE"
-  network_configuration {
-    security_groups = [aws_security_group.ecs_task_sg.id, aws_security_group.network_load_balancer_sg.id]
-    subnets = aws_subnet.private.*.id
-    assign_public_ip = true
-  }
-  load_balancer {
-    target_group_arn = aws_alb_target_group.buildbot_target_group.id
-    container_name = "buildbot"
-    container_port = 8010
-  }
-  load_balancer {
-    target_group_arn = aws_lb_target_group.buildbot_workers_target_group.id
-    container_name = "buildbot"
-    container_port = 9989
-  }
-  depends_on = [aws_alb_listener.buildbot_listener, aws_iam_role_policy_attachment.ecs_tasks_policy_attachment]
-}
-
-# ECR repository
-
-resource "aws_ecr_repository" "buildbot_repository" {
-  name = "buildbot"
+resource "aws_autoscaling_group" "buildbot_asg" {
+  name = "buildbot_asg"
+  health_check_type = "EC2"
+  launch_configuration = aws_launch_configuration.buildbot_launch_cfg.name
+  max_size = 1
+  min_size = 1
+  vpc_zone_identifier = aws_subnet.public.*.id
 }
 
 # SSM parameters
+
+data "aws_ami" "buildbot_linux_worker_ami" {
+  most_recent = true
+  name_regex = "^buildbot-worker-\\d{10}"
+  owners = ["self"]
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+data "aws_ami" "buildbot_windows_worker_ami" {
+  most_recent = true
+  name_regex = "^buildbot-worker-windows"
+  owners = ["self"]
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
 
 resource "aws_ssm_parameter" "buildbot_web_url" {
   name  = "/buildbot/web-url"
@@ -636,11 +451,58 @@ resource "aws_ssm_parameter" "buildbot_github_api_token" {
   value = var.buildbot_github_api_token
 }
 
-# CloudWatch
+resource "aws_ssm_parameter" "buildbot_allow_ssh_sg" {
+  name  = "/buildbot/allow_ssh_sg"
+  type  = "String"
+  value = aws_security_group.allow_ssh_sh.id
+}
 
-resource "aws_cloudwatch_log_group" "hello_world" {
-  name = local.container_name
-  retention_in_days = 1
+resource "aws_ssm_parameter" "buildbot_allow_rdp_sg" {
+  name  = "/buildbot/allow_rdp_sg"
+  type  = "String"
+  value = aws_security_group.allow_rdp_sg.id
+}
+
+resource "aws_ssm_parameter" "buildbot_subnet" {
+  name  = "/buildbot/subnet"
+  type  = "String"
+  value = element(aws_subnet.public.*.id, 0)
+}
+
+resource "aws_ssm_parameter" "buildbot_workers_instance_profile" {
+  name  = "/buildbot/workers_instance_profile"
+  type  = "String"
+  value = aws_iam_instance_profile.ec2_buildbot_worker_instance_profile.name
+}
+
+resource "aws_ssm_parameter" "buildbot_master_instance_profile" {
+  name  = "/buildbot/master_instance_profile"
+  type  = "String"
+  value = aws_iam_instance_profile.ec2_buildbot_master_instance_profile.name
+}
+
+resource "aws_ssm_parameter" "buildbot_keypair_name" {
+  name  = "/buildbot/keypair_name"
+  type  = "String"
+  value = aws_key_pair.buildbot.key_name
+}
+
+resource "aws_ssm_parameter" "buildbot_worker_instance_type" {
+  name  = "/buildbot/worker_instance_type"
+  type  = "String"
+  value = "t2.medium"
+}
+
+resource "aws_ssm_parameter" "buildbot_linux_worker_ami_id" {
+  name  = "/buildbot/linux_worker_ami_id"
+  type  = "String"
+  value = data.aws_ami.buildbot_linux_worker_ami.image_id
+}
+
+resource "aws_ssm_parameter" "buildbot_windows_worker_ami_id" {
+  name  = "/buildbot/windows_worker_ami_id"
+  type  = "String"
+  value = data.aws_ami.buildbot_windows_worker_ami.image_id
 }
 
 # Route 53
@@ -657,11 +519,8 @@ resource "aws_route53_record" "domain_record" {
   zone_id = aws_route53_zone.public_hosted_zone.zone_id
   name = local.domain
   type = "A"
-  alias {
-    name = aws_alb.buildbot_alb.dns_name
-    zone_id = aws_alb.buildbot_alb.zone_id
-    evaluate_target_health = true
-  }
+  ttl = "300"
+  records = [aws_eip.eip.public_ip]
 }
 
 resource "aws_route53_record" "workers_subdomain_ns_record" {
@@ -682,32 +541,8 @@ resource "aws_route53_record" "workers_subdomain_a_record" {
   zone_id = aws_route53_zone.workers_subdomain_public_hosted_zone.zone_id
   name = "workers.${local.domain}"
   type = "A"
-  alias {
-    name = aws_lb.buildbot_nlb.dns_name
-    zone_id = aws_lb.buildbot_nlb.zone_id
-    evaluate_target_health = true
-  }
-}
-
-resource "aws_route53_record" "ssl_certificate_validation_record" {
-  name = aws_acm_certificate.ssl_certificate.domain_validation_options.0.resource_record_name
-  type = aws_acm_certificate.ssl_certificate.domain_validation_options.0.resource_record_type
-  zone_id = aws_route53_zone.public_hosted_zone.id
-  records = ["${aws_acm_certificate.ssl_certificate.domain_validation_options.0.resource_record_value}"]
-  ttl = 60
-}
-
-# ACM
-
-resource "aws_acm_certificate" "ssl_certificate" {
-  domain_name = "*.${local.domain}"
-  validation_method = "DNS"
-  subject_alternative_names = ["${local.domain}"]
-}
-
-resource "aws_acm_certificate_validation" "ssl_certificate_validation" {
-  certificate_arn = aws_acm_certificate.ssl_certificate.arn
-  validation_record_fqdns = ["${aws_route53_record.ssl_certificate_validation_record.fqdn}"]
+  ttl = "300"
+  records = [aws_eip.eip.public_ip]
 }
 
 # EC2

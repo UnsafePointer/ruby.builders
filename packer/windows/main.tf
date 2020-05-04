@@ -3,17 +3,53 @@ provider "aws" {
   region = "us-east-1"
 }
 
-locals {
-  windows_ami = "ami-045f8603a6a480044"
+data "aws_ami" "buildbot_worker_ami" {
+  most_recent = true
+  name_regex = "^buildbot-worker-windows"
+  owners = ["self"]
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+data "aws_ssm_parameter" "buildbot_keypair_name" {
+  name = "/buildbot/keypair_name"
+}
+
+data "aws_ssm_parameter" "buildbot_subnet" {
+  name = "/buildbot/subnet"
+}
+
+data "aws_ssm_parameter" "buildbot_worker_instance_profile" {
+  name = "/buildbot/workers_instance_profile"
+}
+
+data "aws_ssm_parameter" "buildbot_allow_ssh_sg" {
+  name = "/buildbot/allow_ssh_sg"
+}
+
+data "aws_ssm_parameter" "buildbot_allow_rdp_sg" {
+  name = "/buildbot/allow_rdp_sg"
+}
+
+data "aws_ssm_parameter" "buildbot_worker_instance_type" {
+  name = "/buildbot/worker_instance_type"
 }
 
 resource "aws_instance" "windows" {
-  ami = local.windows_ami
-  instance_type = "t2.medium"
-  key_name = "buildbot-key"
-  subnet_id = "subnet-0fc32b6dc9692fd13"
-  iam_instance_profile = "ec2_buildbot_worker_instance_profile"
-  vpc_security_group_ids = ["sg-048857df200b4ef4f", "sg-0f59e118151d0f235"]
+  ami = data.aws_ami.buildbot_worker_ami.image_id
+  instance_type = data.aws_ssm_parameter.buildbot_worker_instance_type.value
+  key_name = data.aws_ssm_parameter.buildbot_keypair_name.value
+  subnet_id = data.aws_ssm_parameter.buildbot_subnet.value
+  iam_instance_profile = data.aws_ssm_parameter.buildbot_worker_instance_profile.value
+  vpc_security_group_ids = [data.aws_ssm_parameter.buildbot_allow_ssh_sg.value, data.aws_ssm_parameter.buildbot_allow_rdp_sg.value]
 }
 
 output "windows_instance_public_ic" {
