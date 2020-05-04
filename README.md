@@ -15,26 +15,31 @@
 
 ```Bash
 .
-├── docker # Contains everything necessary to build the Buildbot master Docker image
-│   ├── Dockerfile
-│   ├── README.md
-│   ├── docker-compose.yml # Docker Compose project to run everything locally
-│   ├── ecr-login.sh
-│   ├── ecr-push.sh # Bash script to build and push the Docker image to ECR
-│   └── master.cfg
-├── main.tf # Terraform project to bootstrap a micro VPC and Buildbot on AWS Fargate
+├── main.tf # Terraform project to bootstrap a micro VPC and Buildbot on EC2
 ├── packer # Contains everything necessary to build the Buildbot worker AMI
-│   ├── README.md
-│   ├── build-ami.sh # Bash script to build and publis the AMI
 │   ├── linux
-│   │   ├── Dockerfile # Dockerfile to test AMI steps locally
+│   │   ├── build-ami.sh # Bash script to validate and build AMI
 │   │   ├── buildbot-worker.service # systemd service unit for Buildbot worker process
-│   │   ├── linux.json
+│   │   ├── Dockerfile # Dockerfile to test AMI steps locally
+│   │   ├── linux.json # Packer template to build a Buildbot worker AMI
 │   │   ├── main.tf # Terraform project to test the AMI
 │   │   └── self-terminate.sh # Bash script to self-terminate EC2 instances
+│   ├── master
+│   │   ├── build-ami.sh # Bash script to validate and build AMI
+│   │   ├── buildbot-master.service # systemd service unit for Buildbot master process
+│   │   ├── buildbot.tac # Buildbot master configuration file
+│   │   ├── Dockerfile # Dockerfile to test AMI steps locally
+│   │   ├── linux.json # Packer template to build a Buildbot master AMI
+│   │   ├── main.tf # Terraform project to test the AMI
+│   │   ├── master.cfg # Buildbot master configuration file
+│   │   ├── nginx.service # systemd service unit for nginx process
+│   │   ├── ruby.builders.conf # nginx configuration file
+│   │   └── self-terminate.sh # Bash script to self-terminate EC2 instances
+│   ├── README.md
 │   └── windows
-│       ├── main.tf
+│       ├── main.tf # Terraform project to test the AMI
 │       └── self-terminate.bat # Bash script to self-terminate EC2 instances
+├── README.md
 └── templates
     └── buildbot.json.tpl
 ```
