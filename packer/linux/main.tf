@@ -3,13 +3,45 @@ provider "aws" {
   region = "us-east-1"
 }
 
+data "aws_ami" "buildbot_worker_ami" {
+  most_recent = true
+  name_regex = "^buildbot-worker-\\d{10}"
+  owners = ["self"]
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
+data "aws_ssm_parameter" "buildbot_keypair_name" {
+  name = "/buildbot/keypair_name"
+}
+
+data "aws_ssm_parameter" "buildbot_subnet" {
+  name = "/buildbot/subnet"
+}
+
+data "aws_ssm_parameter" "buildbot_worker_instance_profile" {
+  name = "/buildbot/workers_instance_profile"
+}
+
+data "aws_ssm_parameter" "buildbot_allow_ssh_sg" {
+  name = "/buildbot/allow_ssh_sg"
+}
+
 resource "aws_instance" "linux" {
-  ami = "ami-07225c100ab116fa9"
+  ami = data.aws_ami.buildbot_worker_ami.image_id
   instance_type = "t2.medium"
-  key_name = "buildbot-key"
-  subnet_id = "subnet-0fc32b6dc9692fd13 "
-  iam_instance_profile = "ec2_buildbot_worker_instance_profile"
-  vpc_security_group_ids = ["sg-048857df200b4ef4f"]
+  key_name = data.aws_ssm_parameter.buildbot_keypair_name.value
+  subnet_id = data.aws_ssm_parameter.buildbot_subnet.value
+  iam_instance_profile = data.aws_ssm_parameter.buildbot_worker_instance_profile.value
+  vpc_security_group_ids = [data.aws_ssm_parameter.buildbot_allow_ssh_sg.value]
 }
 
 output "instance_public_ic" {

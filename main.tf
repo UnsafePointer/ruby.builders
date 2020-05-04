@@ -39,9 +39,7 @@ locals {
   domain = "ruby.builders"
   region = "us-east-1"
   availability_zones = ["us-east-1a"]
-  container_name = "buildbot"
-  ami_id = "ami-0579b323a5022a724"
-  instance_type = "t3.nano"
+  master_instance_type = "t3.nano"
 }
 
 resource "aws_vpc" "buildbot_micro" {
@@ -317,10 +315,31 @@ resource "aws_iam_instance_profile" "ec2_buildbot_worker_instance_profile" {
 
 # EC2
 
+data "aws_ami" "buildbot_master_ami" {
+  most_recent = true
+  name_regex = "^buildbot-master"
+  owners = ["self"]
+
+  filter {
+    name   = "name"
+    values = ["buildbot-master"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}
+
 resource "aws_launch_configuration" "buildbot_launch_cfg" {
   name_prefix = "buildbot_launch_cfg"
-  image_id = local.ami_id
-  instance_type = local.instance_type
+  image_id = data.aws_ami.buildbot_master_ami.image_id
+  instance_type = local.master_instance_type
   associate_public_ip_address = true
   iam_instance_profile = aws_iam_instance_profile.ec2_buildbot_master_instance_profile.name
   key_name = aws_key_pair.buildbot.key_name
@@ -422,6 +441,18 @@ resource "aws_ssm_parameter" "buildbot_workers_instance_profile" {
   name  = "/buildbot/workers_instance_profile"
   type  = "String"
   value = aws_iam_instance_profile.ec2_buildbot_worker_instance_profile.name
+}
+
+resource "aws_ssm_parameter" "buildbot_master_instance_profile" {
+  name  = "/buildbot/master_instance_profile"
+  type  = "String"
+  value = aws_iam_instance_profile.ec2_buildbot_master_instance_profile.name
+}
+
+resource "aws_ssm_parameter" "buildbot_keypair_name" {
+  name  = "/buildbot/keypair_name"
+  type  = "String"
+  value = aws_key_pair.buildbot.key_name
 }
 
 # Route 53
