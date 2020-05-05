@@ -16,8 +16,8 @@ Environment=BUILDBOT_GITHUB_HOOK_SECRET=ssm:///buildbot/github_hook_secret
 Environment=BUILDBOT_GITHUB_API_TOKEN=ssm:///buildbot/github_api_token
 Environment=BUILDBOT_ALLOW_SSH_SG=ssm:///buildbot/allow_ssh_sg
 Environment=BUILDBOT_ALLOW_RDP_SG=ssm:///buildbot/allow_rdp_sg
-Environment=BUILDBOT_SUBNET=ssm:///buildbot/buildbot_subnet
-Environment=BUILDBOT_WORKERS_INSTANCE_PROFILE=ssm:///buildbot/buildbot_workers_instance_profile
+Environment=BUILDBOT_SUBNET=ssm:///buildbot/subnet
+Environment=BUILDBOT_WORKERS_INSTANCE_PROFILE=ssm:///buildbot/workers_instance_profile
 Environment=BUILDBOT_KEYPAIR_NAME=ssm:///buildbot/keypair_name
 Environment=BUILDBOT_WORKER_INSTANCE_TYPE=ssm:///buildbot/worker_instance_type
 Environment=BUILDBOT_LINUX_WORKER_AMI_ID=ssm:///buildbot/linux_worker_ami_id
