@@ -321,11 +321,6 @@ data "aws_ami" "buildbot_master_ami" {
   owners = ["self"]
 
   filter {
-    name   = "name"
-    values = ["buildbot-master"]
-  }
-
-  filter {
     name   = "root-device-type"
     values = ["ebs"]
   }
