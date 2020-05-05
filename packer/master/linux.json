@@ -93,19 +93,11 @@
       "destination": "/home/ubuntu/ruby.builders.conf"
     },
     {
-      "type": "file",
-      "source": "nginx.service",
-      "destination": "/home/ubuntu/nginx.service"
-    },
-    {
       "type": "shell",
       "inline": [
         "cp /home/ubuntu/ruby.builders.conf /etc/nginx/conf.d/ruby.builders.conf",
         "rm -rf /etc/nginx/sites-enabled/default",
-        "systemctl stop nginx.service",
-        "systemctl disable nginx.service",
-        "systemctl enable /home/ubuntu/nginx.service",
-        "systemctl start nginx.service"
+        "service nginx reload"
       ],
       "execute_command": "echo 'packer' | sudo -S sh -c '{{ .Vars }} {{ .Path }}'"
     }
