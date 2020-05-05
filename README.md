@@ -39,7 +39,5 @@
 │   └── windows
 │       ├── main.tf # Terraform project to test the AMI
 │       └── self-terminate.bat # Bash script to self-terminate EC2 instances
-├── README.md
-└── templates
-    └── buildbot.json.tpl
+└── README.md
 ```
