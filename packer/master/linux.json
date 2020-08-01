@@ -1,7 +1,7 @@
 {
   "variables": {
-    "email": "",
-    "domain": ""
+    "email": "{{env `EMAIL`}}",
+    "domain": "{{env `DOMAIN`}}"
   },
   "builders": [
     {
